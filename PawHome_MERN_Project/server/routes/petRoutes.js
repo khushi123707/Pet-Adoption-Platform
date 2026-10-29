@@ -1,0 +1,6 @@
+import {Router} from 'express';import Pet from '../models/Pet.js';import {requireAuth} from '../middleware/auth.js';
+const router=Router();
+router.get('/',async(req,res,next)=>{try{const{category,search}=req.query;const filter={adopted:false};if(category&&category!=='All')filter.category=category;if(search?.trim()){const s=search.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');filter.$or=['name','breed','city','category'].map(k=>({[k]:{$regex:s,$options:'i'}}));}res.json({pets:await Pet.find(filter).sort({createdAt:-1}).limit(100)});}catch(e){next(e);}});
+router.get('/:id',async(req,res,next)=>{try{const pet=await Pet.findById(req.params.id);if(!pet)return res.status(404).json({message:'Pet not found.'});res.json({pet});}catch(e){next(e);}});
+router.post('/',requireAuth,async(req,res,next)=>{try{const{name,category,breed,age,city,image,gender,description}=req.body;if(![name,category,breed,age,city,image].every(v=>String(v||'').trim()))return res.status(400).json({message:'Please fill all required pet details.'});const pet=await Pet.create({name,category,breed,age,city,image,gender,description,createdBy:req.user.id});res.status(201).json({pet});}catch(e){next(e);}});
+export default router;
